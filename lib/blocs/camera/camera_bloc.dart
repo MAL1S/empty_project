@@ -2,28 +2,18 @@ import 'package:camera/camera.dart';
 import 'package:empty_project/blocs/camera/camera_event.dart';
 import 'package:empty_project/blocs/camera/camera_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../utils/camera_utils.dart';
 
 class CameraBloc extends Bloc<CameraEvent, CameraState> {
-  CameraBloc({
-    required this.cameraUtils,
-    this.resolutionPreset = ResolutionPreset.medium,
-    this.cameraLensDirection = CameraLensDirection.back,
-  }) : super(CameraInitial());
-
-  final CameraUtils cameraUtils;
-  final ResolutionPreset resolutionPreset;
-  final CameraLensDirection cameraLensDirection;
+  CameraBloc() : super(CameraInitial());
 
   CameraController? _controller;
-  CameraController getController() => _controller!;
 
   bool isInitialized() => _controller?.value.isInitialized ?? false;
 
   @override
-  Stream<CameraState> mapEventToState(
-      CameraEvent event,
-      ) async* {
+  Stream<CameraState> mapEventToState(CameraEvent event) async* {
     if (event is CameraInitialized)
       yield* _mapCameraInitializedToState(event);
     else if (event is CameraCaptured)
@@ -33,13 +23,11 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     }
   }
 
-  Stream<CameraState> _mapCameraInitializedToState(
-      CameraInitialized event) async* {
+  Stream<CameraState> _mapCameraInitializedToState(CameraInitialized event) async* {
     try {
-      _controller = await cameraUtils.getCameraController(
-          resolutionPreset, cameraLensDirection);
+      _controller = await CameraUtils.getCameraController();
       await _controller!.initialize();
-      yield CameraReady();
+      yield CameraReady(_controller);
     } on CameraException catch (error) {
       _controller?.dispose();
       yield CameraFailure(error: error.description!);
@@ -49,7 +37,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
   }
 
   Stream<CameraState> _mapCameraCapturedToState(CameraCaptured event) async* {
-    if(state is CameraReady){
+    if (state is CameraReady) {
       yield CameraCaptureInProgress();
       try {
         //scan qr code

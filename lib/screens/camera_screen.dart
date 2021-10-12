@@ -12,41 +12,43 @@ class CameraScreen extends StatefulWidget {
   State<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends State<CameraScreen> {
+class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
+  late final CameraBloc _cameraBloc;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance?.addObserver(this);
+
+    _cameraBloc = BlocProvider.of<CameraBloc>(context);
+    _cameraBloc.add(CameraInitialized());
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final bloc = BlocProvider.of<CameraBloc>(context);
-
-    if (!bloc.isInitialized()) {
+    if (_cameraBloc.state != CameraReady) {
       return;
     }
 
     if (state == AppLifecycleState.inactive)
-      bloc.add(CameraStopped());
+      _cameraBloc.add(CameraStopped());
     else if (state == AppLifecycleState.resumed) {
-      bloc.add(CameraInitialized());
+      _cameraBloc.add(CameraInitialized());
     }
   }
 
-
   @override
   Widget build(BuildContext context) => BlocConsumer<CameraBloc, CameraState>(
+      bloc: _cameraBloc,
       listener: (context, state) {
         if (state is CameraCaptureSuccess) {
           //move to documentation from QR
         } else if (state is CameraCaptureFailure) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(state.error)));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error)));
         }
       },
       builder: (context, state) => Scaffold(
           body: state is CameraReady
-              ? CameraPreview(
-              BlocProvider.of<CameraBloc>(context).getController())
-              : const Center(
-              child: CircularProgressIndicator()
-          )
-      )
-  );
+              ? CameraPreview(state.controller!)
+              : const Center(child: CircularProgressIndicator())));
 }
-
